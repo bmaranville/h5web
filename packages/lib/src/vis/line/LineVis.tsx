@@ -1,6 +1,5 @@
 import type { Domain, NumArray, NumericType } from '@h5web/shared';
 import {
-  isTypedArray,
   assertLength,
   assertDefined,
   formatTooltipVal,
@@ -27,6 +26,7 @@ import {
   DEFAULT_DOMAIN,
   formatNumType,
   DEFAULT_INTERACTIONS,
+  toArray,
 } from '../utils';
 import DataCurve from './DataCurve';
 import styles from './LineVis.module.css';
@@ -97,7 +97,7 @@ function LineVis(props: Props) {
       return range(dataArray.size);
     }
 
-    return isTypedArray(abscissaValue) ? [...abscissaValue] : abscissaValue;
+    return toArray(abscissaValue);
   }, [abscissaValue, dataArray.size]);
 
   const abscissaToIndex = useValueToIndexScale(abscissas, true);

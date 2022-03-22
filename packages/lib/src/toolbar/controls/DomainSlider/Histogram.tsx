@@ -1,12 +1,10 @@
-import { isTypedArray } from '@h5web/shared';
 import type { Domain, ScaleType } from '@h5web/shared';
 import { useMeasure } from '@react-hookz/web';
 import { AxisBottom, AxisLeft } from '@visx/axis';
 import { scaleLinear } from '@visx/scale';
-import { useMemo } from 'react';
 
 import { useSafeDomain } from '../../../vis/heatmap/hooks';
-import { useCombinedDomain, useDomain } from '../../../vis/hooks';
+import { useArray, useCombinedDomain, useDomain } from '../../../vis/hooks';
 import type { HistogramParams } from '../../../vis/models';
 import { H5WEB_SCALES } from '../../../vis/scales';
 import Tick from '../../../vis/shared/Tick';
@@ -35,10 +33,7 @@ function Histogram(props: Props) {
 
   const [size, ref] = useMeasure<HTMLDivElement>();
 
-  const valuesArray = useMemo(
-    () => (isTypedArray(values) ? [...values] : values),
-    [values]
-  );
+  const valuesArray = useArray(values);
 
   if (!size) {
     return <div ref={ref} className={styles.container} />;

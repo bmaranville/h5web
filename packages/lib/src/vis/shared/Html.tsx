@@ -8,7 +8,7 @@ import {
   useCallback,
   useEffect,
 } from 'react';
-import type { HTMLAttributes } from 'react';
+import type { HTMLAttributes, RefCallback } from 'react';
 import ReactDOM from 'react-dom';
 import type { Group } from 'three';
 import { Vector3 } from 'three';
@@ -16,6 +16,7 @@ import { Vector3 } from 'three';
 import { useAxisSystemContext } from './AxisSystemContext';
 
 interface Props extends HTMLAttributes<HTMLDivElement> {
+  refCallback?: RefCallback<HTMLDivElement>;
   groupProps?: GroupProps;
   followCamera?: boolean;
   scaleOnZoom?: boolean;
@@ -25,6 +26,7 @@ interface Props extends HTMLAttributes<HTMLDivElement> {
 // https://github.com/pmndrs/drei/blob/v6.0.3/src/web/Html.tsx
 function Html(props: Props) {
   const {
+    refCallback,
     className,
     style,
     children,
@@ -51,7 +53,7 @@ function Html(props: Props) {
   });
 
   // Inner `div` that is transformed and scaled if `followCamera` and `scaleOnZoom` are enabled
-  const innerRef = useRef<HTMLDivElement>(null);
+  const innerRef = useRef<HTMLDivElement>();
 
   /* Placeholder R3F group, the position of which is tracked and forwarded to
    * the inner `div` if `followCamera` and `scaleOnZoom` are enabled. */
@@ -93,11 +95,7 @@ function Html(props: Props) {
     }
 
     return () => {
-      if (parentElement) {
-        el.remove();
-      }
-
-      ReactDOM.unmountComponentAtNode(el);
+      el.remove();
     };
   }, [el, parentElement]);
 
@@ -114,7 +112,10 @@ function Html(props: Props) {
 
     ReactDOM.render(
       <div
-        ref={innerRef}
+        ref={(elem) => {
+          refCallback?.(elem);
+          innerRef.current = elem || undefined;
+        }}
         className={className}
         style={{
           position: 'absolute',
@@ -130,7 +131,19 @@ function Html(props: Props) {
       </div>,
       el
     );
-  }, [children, className, divProps, el, getInnerDivTransform, style]);
+
+    return () => {
+      ReactDOM.unmountComponentAtNode(el);
+    };
+  }, [
+    children,
+    className,
+    divProps,
+    el,
+    getInnerDivTransform,
+    refCallback,
+    style,
+  ]);
 
   // Update inner `div` position on every frame
   useFrame(() => {

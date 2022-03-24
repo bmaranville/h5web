@@ -13,8 +13,8 @@ import { useMemo } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 
 import DefaultInteractions from '../../interactions/DefaultInteractions';
-import ResetZoomButton from '../../interactions/ResetZoomButton';
 import type { Interactions } from '../../interactions/models';
+import ResetZoomButton from '../../toolbar/floating/ResetZoomButton';
 import { useAxisDomain, useCustomColors, useValueToIndexScale } from '../hooks';
 import type { AxisParams, CustomColor } from '../models';
 import TooltipMesh from '../shared/TooltipMesh';
@@ -132,6 +132,7 @@ function LineVis(props: Props) {
       >
         <DefaultInteractions interactions={interactions} />
         <ResetZoomButton />
+
         <TooltipMesh
           guides="vertical"
           renderTooltip={(x) => {
@@ -156,6 +157,7 @@ function LineVis(props: Props) {
             );
           }}
         />
+
         <DataCurve
           abscissas={abscissas}
           ordinates={dataArray.data}
@@ -173,6 +175,7 @@ function LineVis(props: Props) {
             curveType={curveType}
           />
         ))}
+
         {children}
       </VisCanvas>
     </figure>

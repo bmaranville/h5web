@@ -1,13 +1,10 @@
 import { App, H5WasmProvider } from '@h5web/app';
 import ReactDOM, { unstable_batchedUpdates } from 'react-dom';
-import { ErrorBoundary } from 'react-error-boundary';
 import type { State, StoreApi, UseBoundStore } from 'zustand';
 import create from 'zustand';
 
 import type { SourceType } from './H5WasmComponent'; // global styles
 import './styles.css';
-
-const URL = import.meta.env.VITE_H5WASM_FALLBACK_URL as string;
 
 interface SourceState extends State {
   source?: SourceType;

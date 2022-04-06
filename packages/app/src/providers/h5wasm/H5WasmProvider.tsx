@@ -1,7 +1,5 @@
-import type { File as H5WasmFile } from 'h5wasm';
 import type { ReactNode } from 'react';
-import { useMemo } from 'react';
-import { useEffect, useState, Component } from 'react';
+import { Component } from 'react';
 
 import Provider from '../Provider';
 import { H5WasmApi } from './h5wasm-api';
@@ -18,78 +16,29 @@ interface Props {
   children: ReactNode;
 }
 
-function H5WasmProvider(props: Props) {
-  const { source, children } = props;
-  const [filePromise, setFilePromise] = useState<Promise<H5WasmFile>>();
-  const [error, setError] = useState<Error | null>(
-    source === undefined ? new Error('source is undefined') : null
-  );
-
-  // Need to do cleanup if re-rendering:
-  // - closing the existing H5WasmFile object
-  // - deleting the backing file in the virtual filesystem (done in fetchSource)
-  // but we don't want to update the filePromise on update of filePromise...
-  // which is why we leave it out of the dependencies below and
-  // need to disable the eslint trigger for that line.
-  useEffect(() => {
-    fetchSource(source, filePromise)
-      .then((res) => {
-        console.log(res);
-        setFilePromise(Promise.resolve(res));
-        setError(null);
-      })
-      .catch((error) => {
-        setError(error);
-      });
-  }, [source]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const api = useMemo(
-    () =>
-      filePromise === undefined
-        ? null
-        : new H5WasmApi(filePromise, getFilePath(source)),
-    [filePromise] // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  console.log(source, filePromise, error);
-  if (error !== null) {
-    return <div className="error">Error: {error.message}</div>;
-  }
-  if (api === null) {
-    return <div className="error">Error: filePromise is undefined.</div>;
-  }
-  console.log('rendering Fn...', source, filePromise);
-
-  return <Provider api={api}>{children}</Provider>;
-}
-
 interface State {
   api?: H5WasmApi;
-  needsFetch: boolean;
+  // needsFetch: boolean;
   error: unknown;
-  prevSource?: H5WasmSourceType;
+  source?: H5WasmSourceType;
 }
 
-export class H5WasmProviderClass extends Component<Props, State> {
+export class H5WasmProvider extends Component<Props, State> {
+  public componentDidMount = this.conditionalFetch.bind(this);
+  public componentDidUpdate = this.componentDidMount.bind(this);
+
   public constructor(props: Props) {
     super(props);
-    this.state = { error: null, needsFetch: props.source !== undefined };
+    this.state = { error: null };
   }
 
-  public static getDerivedStateFromProps(props: Props, state: State): State {
-    if (props.source !== state.prevSource) {
-      return {
-        needsFetch: true,
-        prevSource: props.source,
-        error: null,
-      };
+  public async conditionalFetch() {
+    if (this.state.source !== this.props.source) {
+      await this.loadFilePromise(); // async errors are caught in the method
     }
-    return state;
   }
 
   public render() {
-    if (this.state.needsFetch) {
-      void this.loadFilePromise(); // async errors are caught in the method
-    }
     if (this.state.error !== null) {
       throw this.state.error;
     }
@@ -108,12 +57,12 @@ export class H5WasmProviderClass extends Component<Props, State> {
       this.setState({
         api,
         error: null,
-        needsFetch: false,
+        source,
       });
     } catch (error) {
-      this.setState({ error, needsFetch: false });
+      this.setState({ error, source }); // update source even if it fails to load
     }
   }
 }
 
-export default H5WasmProviderClass;
+export default H5WasmProvider;

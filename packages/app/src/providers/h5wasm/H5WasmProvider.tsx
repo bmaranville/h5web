@@ -1,5 +1,6 @@
 import type { File as H5WasmFile } from 'h5wasm';
 import type { ReactNode } from 'react';
+import { useMemo } from 'react';
 import { useEffect, useState, Component } from 'react';
 
 import Provider from '../Provider';
@@ -33,6 +34,7 @@ function H5WasmProvider(props: Props) {
   useEffect(() => {
     fetchSource(source, filePromise)
       .then((res) => {
+        console.log(res);
         setFilePromise(Promise.resolve(res));
         setError(null);
       })
@@ -40,38 +42,78 @@ function H5WasmProvider(props: Props) {
         setError(error);
       });
   }, [source]); // eslint-disable-line react-hooks/exhaustive-deps
-  console.log(source, error);
+
+  const api = useMemo(
+    () =>
+      filePromise === undefined
+        ? null
+        : new H5WasmApi(filePromise, getFilePath(source)),
+    [filePromise] // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  console.log(source, filePromise, error);
   if (error !== null) {
     return <div className="error">Error: {error.message}</div>;
   }
+  if (api === null) {
+    return <div className="error">Error: filePromise is undefined.</div>;
+  }
+  console.log('rendering Fn...', source, filePromise);
 
-  const api = new H5WasmApi(filePromise, getFilePath(source));
   return <Provider api={api}>{children}</Provider>;
 }
 
 interface State {
-  filePromise: Promise<H5WasmFile>;
+  api?: H5WasmApi;
+  needsFetch: boolean;
+  error: unknown;
+  prevSource?: H5WasmSourceType;
 }
 
 export class H5WasmProviderClass extends Component<Props, State> {
   public constructor(props: Props) {
     super(props);
-    const filePromise = fetchSource(props.source);
-    this.state = { filePromise };
+    this.state = { error: null, needsFetch: props.source !== undefined };
   }
 
   public static getDerivedStateFromProps(props: Props, state: State): State {
-    const filePromise = fetchSource(props.source, state.filePromise);
-    return { filePromise };
+    if (props.source !== state.prevSource) {
+      return {
+        needsFetch: true,
+        prevSource: props.source,
+        error: null,
+      };
+    }
+    return state;
   }
 
   public render() {
-    const api = new H5WasmApi(
-      this.state.filePromise,
-      getFilePath(this.props.source)
-    );
-    return <Provider api={api}>{this.props.children}</Provider>;
+    if (this.state.needsFetch) {
+      void this.loadFilePromise(); // async errors are caught in the method
+    }
+    if (this.state.error !== null) {
+      throw this.state.error;
+    }
+    if (this.state.api === undefined) {
+      return <div className="error">No file loaded</div>;
+    }
+
+    return <Provider api={this.state.api}>{this.props.children}</Provider>;
+  }
+
+  private async loadFilePromise() {
+    const { source } = this.props;
+    try {
+      const file = await fetchSource(source, this.state.api?.file_promise);
+      const api = new H5WasmApi(Promise.resolve(file), getFilePath(source));
+      this.setState({
+        api,
+        error: null,
+        needsFetch: false,
+      });
+    } catch (error) {
+      this.setState({ error, needsFetch: false });
+    }
   }
 }
 
-export default H5WasmProvider;
+export default H5WasmProviderClass;
